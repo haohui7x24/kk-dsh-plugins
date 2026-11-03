@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "会话 Token 用量",
+    "description": "在会话视图栏中新增一个标签页，显示当前会话详细的 Token 消耗量。"
+  }
+}

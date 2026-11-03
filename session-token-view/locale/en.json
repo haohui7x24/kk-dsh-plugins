@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Session Token Usage",
+    "description": "Adds a Conversation view tab with detailed token usage for the current session."
+  }
+}

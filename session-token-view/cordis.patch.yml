@@ -1,0 +1,3 @@
+- insert:
+    - id: session-token-view
+      name: '@local/session-token-view'
