@@ -1,9 +1,9 @@
 {
   "name": "@local/offwork-countdown",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
-  "description": "A live countdown to the end of the workday in the sidebar foot.",
+  "description": "A live countdown or workday progress bar in the sidebar foot, click to switch.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
