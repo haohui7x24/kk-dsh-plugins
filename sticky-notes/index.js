@@ -8,6 +8,7 @@
  */
 import { createHash } from 'node:crypto';
 import {
+  chmod,
   copyFile,
   mkdir,
   readFile,
@@ -43,10 +44,12 @@ const MAX_NOTES = 500;
 const MAX_TEXT = 4000;
 const MAX_IMAGES = 6;
 const MAX_SESSIONS = 8;
-const MAX_BODY = 2 * 1024 * 1024;
+const MAX_BODY = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
 const BACKUP_LIMIT = 20;
+const DIRECTORY_MODE = 0o700;
+const FILE_MODE = 0o600;
 
 function storeDir() {
   const home = process.env.DSH_HOME || join(homedir(), '.dsh');
@@ -65,9 +68,56 @@ function backupsDir() {
   return join(storeDir(), 'backups');
 }
 
+/**
+ * Deleted and pruned images are moved here instead of being unlinked, so the
+ * live images/ directory plus notes backups plus this trash form the recovery
+ * set. The wall never serves files from this directory.
+ */
+function trashDir() {
+  return join(backupsDir(), 'images-trash');
+}
+
 function backupName() {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   return `notes-${stamp}-${process.pid}-${Math.random().toString(36).slice(2, 6)}.json`;
+}
+
+function trashName(name) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const random = Math.random().toString(36).slice(2, 8);
+  return `${stamp}-${process.pid}-${random}-${name}`;
+}
+
+async function fileExists(file) {
+  try {
+    await stat(file);
+    return true;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+/** Move one stored image into backups/images-trash without deleting its bytes. */
+async function moveImageToTrash(name) {
+  const source = join(imagesDir(), name);
+  const directory = trashDir();
+  await mkdir(directory, { recursive: true, mode: DIRECTORY_MODE });
+  const target = join(directory, trashName(name));
+  try {
+    await rename(source, target);
+  } catch (error) {
+    if (!error || error.code !== 'EXDEV') throw error;
+    // Different filesystem: fall back to a copy, then drop the live file.
+    await copyFile(source, target);
+    try {
+      await chmod(target, FILE_MODE);
+    } catch {
+      // The copy is still usable even if its mode cannot be tightened.
+    }
+    await unlink(source);
+  }
+  return target;
 }
 
 /** Keep the newest backups; pruning failures must not block a save. */
@@ -104,12 +154,18 @@ async function pruneBackups() {
 async function backupNotes() {
   const file = storeFile();
   const directory = backupsDir();
-  await mkdir(directory, { recursive: true });
+  await mkdir(directory, { recursive: true, mode: DIRECTORY_MODE });
+  const target = join(directory, backupName());
   try {
-    await copyFile(file, join(directory, backupName()));
+    await copyFile(file, target);
   } catch (error) {
     if (error && error.code === 'ENOENT') return;
     throw error;
+  }
+  try {
+    await chmod(target, FILE_MODE);
+  } catch {
+    // A backup that cannot be tightened is still better than no backup.
   }
   await pruneBackups();
 }
@@ -219,16 +275,39 @@ async function readWall() {
   }
 }
 
+async function cleanupNotesTemps() {
+  let names;
+  try {
+    names = await readdir(storeDir());
+  } catch {
+    return;
+  }
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  await Promise.all(
+    names.map(async (name) => {
+      if (!name.startsWith('notes.json.') || !name.endsWith('.tmp')) return;
+      const file = join(storeDir(), name);
+      try {
+        const info = await stat(file);
+        if (info.mtimeMs <= cutoff) await unlink(file);
+      } catch {
+        // A missing or concurrently removed temp file needs no action.
+      }
+    }),
+  );
+}
+
 async function writeWall(notes) {
   const file = storeFile();
-  await mkdir(dirname(file), { recursive: true });
+  await mkdir(dirname(file), { recursive: true, mode: DIRECTORY_MODE });
+  await cleanupNotesTemps().catch(() => {});
   await backupNotes();
   const updatedAt = Date.now();
   const payload = JSON.stringify({ version: 1, notes, updatedAt }, null, 2);
   const temporary = `${file}.${process.pid}.${updatedAt}.${Math.random()
     .toString(36)
     .slice(2, 8)}.tmp`;
-  await writeFile(temporary, payload, 'utf8');
+  await writeFile(temporary, payload, { encoding: 'utf8', mode: FILE_MODE });
   await rename(temporary, file);
   return { version: 1, notes, updatedAt };
 }
@@ -353,12 +432,29 @@ async function uploadImage(req, res) {
   const id = createHash('sha256').update(body).digest('hex');
   const extension = IMAGE_TYPES.get(detected);
   const directory = imagesDir();
-  await mkdir(directory, { recursive: true });
+  await mkdir(directory, { recursive: true, mode: DIRECTORY_MODE });
   const file = join(directory, `${id}.${extension}`);
+  const temporary = join(
+    directory,
+    `.upload-${id}-${process.pid}-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}.tmp`,
+  );
+  // Write the bytes fully before publishing them under the content-addressed
+  // name, so a crash can never leave a truncated image behind.
+  await writeFile(temporary, body, { flag: 'wx', mode: FILE_MODE });
   try {
-    await writeFile(file, body, { flag: 'wx' });
-  } catch (error) {
-    if (!error || error.code !== 'EEXIST') throw error;
+    if (!(await fileExists(file))) {
+      try {
+        await rename(temporary, file);
+      } catch (error) {
+        // Another upload of the same bytes may have won the race; keep its file.
+        if (!error || (error.code !== 'EEXIST' && error.code !== 'EPERM')) throw error;
+        if (!(await fileExists(file))) throw error;
+      }
+    }
+  } finally {
+    await unlink(temporary).catch(() => {});
   }
   send(res, 200, { id, mime: detected });
 }
@@ -403,17 +499,26 @@ async function deleteImage(res, id) {
   }
   let deleted = 0;
   for (const extension of IMAGE_TYPES.values()) {
+    const name = `${id}.${extension}`;
     try {
-      await unlink(join(imagesDir(), `${id}.${extension}`));
+      await stat(join(imagesDir(), name));
+    } catch (error) {
+      if (error && error.code === 'ENOENT') continue;
+      throw error;
+    }
+    try {
+      await moveImageToTrash(name);
       deleted += 1;
     } catch (error) {
-      if (!error || error.code !== 'ENOENT') throw error;
+      // A concurrent delete or orphan prune already moved it away.
+      if (error && error.code === 'ENOENT') continue;
+      throw error;
     }
   }
   send(res, 200, { deleted });
 }
 
-/** Remove abandoned uploads; images of a deleted note are removed explicitly. */
+/** Move abandoned uploads to the image trash; images of a deleted note are removed explicitly. */
 async function cleanupOrphans(notes) {
   const referenced = new Set();
   for (const note of notes) {
@@ -427,17 +532,28 @@ async function cleanupOrphans(notes) {
     throw error;
   }
   const cutoff = Date.now() - ORPHAN_AGE_MS;
+  const tempCutoff = Date.now() - 60 * 60 * 1000;
   await Promise.all(
     names.map(async (name) => {
+      if (name.startsWith('.upload-') && name.endsWith('.tmp')) {
+        const file = join(imagesDir(), name);
+        try {
+          const info = await stat(file);
+          if (info.mtimeMs <= tempCutoff) await unlink(file);
+        } catch {
+          // A missing or concurrently removed temp file needs no action.
+        }
+        return;
+      }
       const match = IMAGE_NAME.exec(name);
       if (!match || referenced.has(match[1])) return;
       const file = join(imagesDir(), name);
       try {
         const info = await stat(file);
-        if (info.mtimeMs <= cutoff) await unlink(file);
+        if (info.mtimeMs <= cutoff) await moveImageToTrash(name);
       } catch (error) {
         if (!error || error.code !== 'ENOENT') {
-          console.warn('[sticky-notes] could not prune image:', file, error);
+          console.warn('[sticky-notes] could not move orphaned image to trash:', file, error);
         }
       }
     }),

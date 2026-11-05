@@ -31,6 +31,13 @@ window.__ModuleLoader__.load({
         'panel.label': 'Sticky notes',
         title: 'Sticky notes',
         subtitle: 'Jot down anything you need to do. It stays on this machine.',
+        'view.label': 'Notes',
+        'session.viewSubtitle':
+          'Only notes linked to “{title}”. New notes are linked to this session automatically.',
+        'session.fixedHint': 'New notes are linked to this session automatically.',
+        'empty.sessionTitle': 'No notes for this session',
+        'empty.sessionBody':
+          'Add the first note above — it will be linked to this session automatically.',
         'composer.placeholder': 'What do you need to do?',
         'composer.hint': 'Enter to add · Shift+Enter for a new line · paste images directly',
         'action.add': 'Add note',
@@ -103,6 +110,11 @@ window.__ModuleLoader__.load({
         'panel.label': '便签墙',
         title: '便签墙',
         subtitle: '随手记下要做的事，便签会保存在这台机器上。',
+        'view.label': '便签',
+        'session.viewSubtitle': '只显示关联到「{title}」的便签，新建便签会自动绑定这个会话。',
+        'session.fixedHint': '新便签会自动绑定这个会话',
+        'empty.sessionTitle': '这个会话还没有便签',
+        'empty.sessionBody': '在上方记下第一件要做的事，新便签会自动绑定到当前会话。',
         'composer.placeholder': '记下要做的事…',
         'composer.hint': 'Enter 添加 · Shift+Enter 换行 · 可直接粘贴图片',
         'action.add': '添加便签',
@@ -178,6 +190,7 @@ window.__ModuleLoader__.load({
       '.dsn-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;--dsh-scrollbar-width:9px;--dsh-scrollbar-thumb-border:2px}',
       '.dsn-inner{box-sizing:border-box;max-width:1060px;margin:0 auto;padding:30px clamp(20px,4vw,46px) 72px}',
       '[data-platform="darwin"] .dsn-inner{padding-top:calc(30px + var(--dsh-frame-top-clearance,0px))}',
+      '[data-platform="darwin"] .dsn-root--embedded .dsn-inner{padding-top:30px}',
       '.dsn-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 18px}',
       '.dsn-heading{min-width:0}',
       '.dsn-title{margin:0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-.01em}',
@@ -269,6 +282,8 @@ window.__ModuleLoader__.load({
       '.dsn-session-chip-label{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}',
       '.dsn-session-chip-remove{display:grid;place-items:center;flex:none;width:14px;height:14px;padding:0;border:0;border-radius:50%;background:rgba(59,51,32,.12);color:#3b3320;cursor:pointer;appearance:none}',
       '.dsn-session-chip-remove:hover{background:rgba(59,51,32,.24)}',
+      '.dsn-fixed-session{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
+      '.dsn-fixed-hint{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}',
       '.dsn-edit{box-sizing:border-box;width:100%;min-height:92px;max-height:240px;padding:8px;border:1px solid rgba(59,51,32,.24);border-radius:8px;outline:0;resize:vertical;background:rgba(255,255,255,.38);color:#3b3320;font:inherit;font-size:14px;line-height:21px}',
       '.dsn-edit:focus{border-color:rgba(59,51,32,.62)}',
       '.dsn-edit-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}',
@@ -465,11 +480,19 @@ window.__ModuleLoader__.load({
     }
 
     async function saveRemote(notes) {
-      const data = await requestJson(API, {
-        method: 'PUT',
-        headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ notes }),
-      });
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 15000);
+      let data;
+      try {
+        data = await requestJson(API, {
+          method: 'PUT',
+          headers: { accept: 'application/json', 'content-type': 'application/json' },
+          body: JSON.stringify({ notes }),
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timer);
+      }
       if (!data || !Array.isArray(data.notes)) throw new Error('sticky-notes: bad payload');
       return normalizeClientNotes(data.notes);
     }
@@ -1004,7 +1027,7 @@ window.__ModuleLoader__.load({
     }
 
     function SessionChips(props) {
-      const { sessions, t, onOpen, onRemove, className } = props;
+      const { sessions, t, onOpen, onRemove, readOnly, className } = props;
       if (!sessions || sessions.length === 0) return null;
       return h(
         'div',
@@ -1013,6 +1036,8 @@ window.__ModuleLoader__.load({
           const label = session.title || t('session.untitled');
           const title = t('session.open', { title: label });
           const icon = h(ChatIcon, { size: 10 });
+          const interactive = !readOnly && typeof onOpen === 'function';
+          const removable = !readOnly && typeof onRemove === 'function';
           return h(
             'span',
             {
@@ -1020,27 +1045,25 @@ window.__ModuleLoader__.load({
               className: 'dsn-session-chip',
               title: `${label} · ${session.id}`,
             },
-            onRemove
+            interactive
               ? h(
-                  'span',
-                  { className: 'dsn-session-chip-label' },
-                  icon,
-                  h('span', null, label),
-                )
-              : h(
                   'button',
                   {
                     type: 'button',
                     className: 'dsn-session-chip-open',
                     'aria-label': title,
-                    onClick: () => {
-                      if (typeof onOpen === 'function') onOpen(session.id);
-                    },
+                    onClick: () => onOpen(session.id),
                   },
                   icon,
                   h('span', { className: 'dsn-session-chip-label' }, label),
+                )
+              : h(
+                  'span',
+                  { className: 'dsn-session-chip-label' },
+                  icon,
+                  h('span', null, label),
                 ),
-            onRemove
+            removable
               ? h(
                   'button',
                   {
@@ -1061,6 +1084,7 @@ window.__ModuleLoader__.load({
     function SessionDialog(props) {
       const { t, useSessions, useWorkspaces, selected, onApply, onClose, activeLocale } = props;
       const [query, setQuery] = React.useState('');
+      const dialogRef = React.useRef(null);
       const [draft, setDraft] = React.useState(() =>
         (Array.isArray(selected) ? selected : []).slice(),
       );
@@ -1070,35 +1094,44 @@ window.__ModuleLoader__.load({
         () => new Set(archivedSessionIds || []),
         [archivedSessionIds],
       );
-      const subagentIds = React.useMemo(() => {
-        const ids = new Set();
-        const listIds = list && Array.isArray(list.ids) ? list.ids : [];
-        const byId = list && list.byId ? list.byId : {};
-        for (const id of listIds) {
-          const summary = byId[id];
-          if (summary && summary.origin === 'subagent') ids.add(id);
-        }
-        return ids;
-      }, [list]);
 
       React.useEffect(() => {
         const onKey = (event) => {
-          if (event.key === 'Escape') onClose();
+          if (event.key === 'Escape') {
+            onClose();
+            return;
+          }
+          if (event.key !== 'Tab') return;
+          const root = dialogRef.current;
+          if (!root) return;
+          const focusable = Array.from(
+            root.querySelectorAll(
+              'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+            ),
+          ).filter((element) => element.getClientRects().length > 0);
+          if (focusable.length === 0) {
+            event.preventDefault();
+            return;
+          }
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          const active = document.activeElement;
+          if (!root.contains(active)) {
+            event.preventDefault();
+            (event.shiftKey ? last : first).focus();
+            return;
+          }
+          if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+          }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
       }, [onClose]);
-
-      React.useEffect(() => {
-        if (archived.size === 0 && subagentIds.size === 0) return;
-        setDraft((current) => {
-          const next = current.filter(
-            (session) =>
-              !archived.has(session.id) && !subagentIds.has(session.id),
-          );
-          return next.length === current.length ? current : next;
-        });
-      }, [archived, subagentIds]);
 
       const sessions = React.useMemo(() => {
         const ids = list && Array.isArray(list.ids) ? list.ids : [];
@@ -1106,9 +1139,15 @@ window.__ModuleLoader__.load({
         const rows = [];
         for (const id of ids) {
           const summary = byId[id];
+          if (!summary) continue;
+          // Keep the blank conversation the user is currently in so it can be
+          // bound before its first message; other blank sessions stay hidden.
+          const currentBlank =
+            summary.blank === true &&
+            Boolean(summary.retainedBy) &&
+            summary.retainedBy.mainView > 0;
           if (
-            !summary ||
-            summary.blank ||
+            (summary.blank && !currentBlank) ||
             summary.origin === 'subagent' ||
             archived.has(summary.id)
           ) {
@@ -1151,6 +1190,7 @@ window.__ModuleLoader__.load({
             role: 'dialog',
             'aria-modal': 'true',
             'aria-label': t('session.bind'),
+            ref: dialogRef,
             onClick: (event) => event.stopPropagation(),
           },
           h(
@@ -1345,7 +1385,16 @@ window.__ModuleLoader__.load({
       useLocaleRevision(locale);
 
       const { notes, phase, mode, error, persist } = useWall();
-      const [filter, setFilter] = React.useState('all');
+      const fixedSession =
+        props.fixedSession && props.fixedSession.id ? props.fixedSession : null;
+      const fixedId = fixedSession ? fixedSession.id : null;
+      const scopedNotes = fixedId
+        ? notes.filter((note) =>
+            (note.sessions || []).some((session) => session.id === fixedId),
+          )
+        : notes;
+      // The wall opens on what still needs doing; "全部" stays one tap away.
+      const [filter, setFilter] = React.useState('open');
       const [draft, setDraft] = React.useState('');
       const [draftColor, setDraftColor] = React.useState('sun');
       const [editingId, setEditingId] = React.useState(null);
@@ -1358,7 +1407,9 @@ window.__ModuleLoader__.load({
       const [viewingImage, setViewingImage] = React.useState(null);
       const [draggingId, setDraggingId] = React.useState(null);
       const [dropTarget, setDropTarget] = React.useState(null);
-      const [draftSessions, setDraftSessions] = React.useState([]);
+      const [draftSessions, setDraftSessions] = React.useState(() =>
+        fixedSession ? [fixedSession] : [],
+      );
       const [editSessions, setEditSessions] = React.useState([]);
       const [sessionPicker, setSessionPicker] = React.useState(null);
       const [sessionError, setSessionError] = React.useState('');
@@ -1371,9 +1422,9 @@ window.__ModuleLoader__.load({
         typeof props.openSession === 'function';
       const activeLocale =
         locale && typeof locale.getSnapshot === 'function' ? locale.getSnapshot().active : undefined;
-      const openCount = notes.filter((note) => !note.done).length;
-      const doneCount = notes.length - openCount;
-      const visible = notes.filter((note) => {
+      const openCount = scopedNotes.filter((note) => !note.done).length;
+      const doneCount = scopedNotes.length - openCount;
+      const visible = scopedNotes.filter((note) => {
         if (filter === 'open') return !note.done;
         if (filter === 'done') return note.done;
         return true;
@@ -1634,13 +1685,11 @@ window.__ModuleLoader__.load({
         }
         event.preventDefault();
         const delta = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
-        const from = notes.findIndex((item) => item.id === note.id);
-        const to = from + delta;
-        if (from < 0 || to < 0 || to >= notes.length) return;
-        const next = notes.slice();
-        const [moved] = next.splice(from, 1);
-        next.splice(to, 0, moved);
-        persist(next);
+        const from = visible.findIndex((item) => item.id === note.id);
+        if (from < 0) return;
+        const neighbor = visible[from + delta];
+        if (!neighbor) return;
+        finishReorder(note.id, neighbor.id, delta < 0 ? 'before' : 'after');
       }
 
       function addNote() {
@@ -1655,12 +1704,14 @@ window.__ModuleLoader__.load({
           createdAt: now,
           updatedAt: now,
           images: draftImages,
-          sessions: draftSessions,
+          sessions: fixedSession ? [fixedSession] : draftSessions,
         };
         persist([note, ...notes]);
+        // A new note is always open, so leave "已完成" to keep it in view.
+        if (filter === 'done') setFilter('open');
         setDraft('');
         setDraftImages([]);
-        setDraftSessions([]);
+        setDraftSessions(fixedSession ? [fixedSession] : []);
         setImageError('');
         setSessionError('');
       }
@@ -1691,7 +1742,15 @@ window.__ModuleLoader__.load({
         setEditText(note.text);
         setEditColor(note.color);
         setEditImages((note.images || []).slice());
-        setEditSessions((note.sessions || []).slice());
+        const nextSessions = (note.sessions || []).slice();
+        if (fixedSession) {
+          const index = nextSessions.findIndex(
+            (session) => session.id === fixedSession.id,
+          );
+          if (index >= 0) nextSessions[index] = fixedSession;
+          else nextSessions.unshift(fixedSession);
+        }
+        setEditSessions(nextSessions.slice(0, MAX_SESSIONS));
         setImageError('');
         setSessionError('');
       }
@@ -1721,7 +1780,14 @@ window.__ModuleLoader__.load({
                 text: text.slice(0, MAX_TEXT),
                 color: editColor,
                 images: editImages,
-                sessions: editSessions,
+                sessions: fixedSession
+                  ? [
+                      fixedSession,
+                      ...editSessions.filter(
+                        (session) => session.id !== fixedSession.id,
+                      ),
+                    ].slice(0, MAX_SESSIONS)
+                  : editSessions,
                 updatedAt: Date.now(),
               }
             : item,
@@ -1774,10 +1840,30 @@ window.__ModuleLoader__.load({
       }
 
       const headingCount =
-        notes.length === 1 ? t('count.one') : t('count.other', { count: notes.length });
+        scopedNotes.length === 1
+          ? t('count.one')
+          : t('count.other', { count: scopedNotes.length });
 
       function renderEmpty() {
-        const key = filter === 'open' ? 'open' : filter === 'done' ? 'done' : '';
+        if (fixedId && scopedNotes.length === 0) {
+          return h(
+            'div',
+            { className: 'dsn-empty' },
+            h('div', { className: 'dsn-empty-art' }, h(EmptyArt)),
+            h('p', { className: 'dsn-empty-title' }, t('empty.sessionTitle')),
+            h('p', { className: 'dsn-empty-body' }, t('empty.sessionBody')),
+          );
+        }
+        // An empty wall is empty for every filter, so never claim that its
+        // to-dos were all checked off just because "待办" is the default view.
+        const key =
+          scopedNotes.length === 0
+            ? ''
+            : filter === 'open'
+              ? 'open'
+              : filter === 'done'
+                ? 'done'
+                : '';
         return h(
           'div',
           { className: 'dsn-empty' },
@@ -1899,7 +1985,8 @@ window.__ModuleLoader__.load({
                 h(SessionChips, {
                   sessions: editSessions,
                   t,
-                  onRemove: removeEditSession,
+                  onRemove: fixedSession ? undefined : removeEditSession,
+                  readOnly: Boolean(fixedSession),
                 }),
                 h(
                   'div',
@@ -1915,18 +2002,20 @@ window.__ModuleLoader__.load({
                     disabled: uploading > 0 || editImages.length >= MAX_IMAGES,
                     onFiles: (files) => attachFiles(files, editImages.length, addEditImages),
                   }),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dsn-attach',
-                      disabled: !canBindSessions,
-                      'aria-label': t('session.bind'),
-                      title: t('session.bind'),
-                      onClick: () => openSessionPicker(note.id),
-                    },
-                    h(LinkIcon, { size: 15 }),
-                  ),
+                  fixedSession
+                    ? null
+                    : h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'dsn-attach',
+                          disabled: !canBindSessions,
+                          'aria-label': t('session.bind'),
+                          title: t('session.bind'),
+                          onClick: () => openSessionPicker(note.id),
+                        },
+                        h(LinkIcon, { size: 15 }),
+                      ),
                   h(
                     'div',
                     { className: 'dsn-edit-btns' },
@@ -1992,10 +2081,15 @@ window.__ModuleLoader__.load({
                 ? t('status.local')
                 : t('status.ready');
 
+      const subtitleText = fixedSession
+        ? t('session.viewSubtitle', {
+            title: fixedSession.title || t('session.untitled'),
+          })
+        : t('subtitle');
+
       return h(
         'div',
-        { className: 'dsn-root' },
-        h('style', { 'data-plugin': '@local/sticky-notes' }, CSS),
+        { className: fixedSession ? 'dsn-root dsn-root--embedded' : 'dsn-root' },
         h(
           'div',
           { className: 'dsn-scroll' },
@@ -2009,7 +2103,7 @@ window.__ModuleLoader__.load({
                 'div',
                 { className: 'dsn-heading' },
                 h('h1', { className: 'dsn-title' }, t('title')),
-                h('p', { className: 'dsn-sub' }, t('subtitle')),
+                h('p', { className: 'dsn-sub' }, subtitleText),
               ),
               h('span', { className: 'dsn-count' }, headingCount),
             ),
@@ -2063,16 +2157,27 @@ window.__ModuleLoader__.load({
                       : null,
                   )
                 : null,
-              draftSessions.length > 0
-                ? h(SessionChips, {
-                    sessions: draftSessions,
-                    t,
-                    onRemove: (id) =>
-                      setDraftSessions((prev) =>
-                        prev.filter((session) => session.id !== id),
-                      ),
-                  })
-                : null,
+              fixedSession
+                ? h(
+                    'div',
+                    { className: 'dsn-fixed-session' },
+                    h(SessionChips, {
+                      sessions: [fixedSession],
+                      t,
+                      readOnly: true,
+                    }),
+                    h('span', { className: 'dsn-fixed-hint' }, t('session.fixedHint')),
+                  )
+                : draftSessions.length > 0
+                  ? h(SessionChips, {
+                      sessions: draftSessions,
+                      t,
+                      onRemove: (id) =>
+                        setDraftSessions((prev) =>
+                          prev.filter((session) => session.id !== id),
+                        ),
+                    })
+                  : null,
               h(
                 'div',
                 { className: 'dsn-composer-bar' },
@@ -2089,18 +2194,20 @@ window.__ModuleLoader__.load({
                     disabled: loading || uploading > 0 || draftImages.length >= MAX_IMAGES,
                     onFiles: (files) => attachFiles(files, draftImages.length, addDraftImages),
                   }),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dsn-attach',
-                      disabled: !canBindSessions,
-                      'aria-label': t('session.bind'),
-                      title: t('session.bind'),
-                      onClick: () => openSessionPicker('draft'),
-                    },
-                    h(LinkIcon, { size: 15 }),
-                  ),
+                  fixedSession
+                    ? null
+                    : h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'dsn-attach',
+                          disabled: !canBindSessions,
+                          'aria-label': t('session.bind'),
+                          title: t('session.bind'),
+                          onClick: () => openSessionPicker('draft'),
+                        },
+                        h(LinkIcon, { size: 15 }),
+                      ),
                 ),
                 h(
                   'div',
@@ -2162,22 +2269,22 @@ window.__ModuleLoader__.load({
                   {
                     type: 'button',
                     className: 'dsn-tab',
-                    'aria-pressed': filter === 'all',
-                    onClick: () => setFilter('all'),
+                    'aria-pressed': filter === 'open',
+                    onClick: () => setFilter('open'),
                   },
-                  t('filter.all'),
-                  h('span', { className: 'dsn-tab-count' }, notes.length),
+                  t('filter.open'),
+                  h('span', { className: 'dsn-tab-count' }, openCount),
                 ),
                 h(
                   'button',
                   {
                     type: 'button',
                     className: 'dsn-tab',
-                    'aria-pressed': filter === 'open',
-                    onClick: () => setFilter('open'),
+                    'aria-pressed': filter === 'all',
+                    onClick: () => setFilter('all'),
                   },
-                  t('filter.open'),
-                  h('span', { className: 'dsn-tab-count' }, openCount),
+                  t('filter.all'),
+                  h('span', { className: 'dsn-tab-count' }, scopedNotes.length),
                 ),
                 h(
                   'button',
@@ -2280,6 +2387,15 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'locale', 'uiWorkspace'],
       apply(ctx) {
+        ctx.effect(() => {
+          if (typeof document === 'undefined') return undefined;
+          const style = document.createElement('style');
+          style.setAttribute('data-plugin', '@local/sticky-notes');
+          style.textContent = CSS;
+          (document.head || document.documentElement).appendChild(style);
+          return () => style.remove();
+        });
+
         for (const locale of LOCALES) {
           ctx.effect(() =>
             ctx.locale.register(
@@ -2298,6 +2414,26 @@ window.__ModuleLoader__.load({
             t: typeof props.t === 'function' ? props.t : t,
             openSession: (sessionId) => ctx.uiWorkspace.openSession(sessionId),
           });
+        const SessionNotesView = (props) => {
+          const viewT = typeof props.t === 'function' ? props.t : t;
+          const sessionId = props.sessionId;
+          const summary = props.useSessions((state) =>
+            state && state.byId ? state.byId[sessionId] : undefined,
+          );
+          const fixedSession = sessionId
+            ? {
+                id: sessionId,
+                title: summary && summary.title ? summary.title : '',
+              }
+            : null;
+          return h(NotesWallPage, {
+            ...props,
+            t: viewT,
+            locale: ctx.locale,
+            openSession: (id) => ctx.uiWorkspace.openSession(id),
+            fixedSession,
+          });
+        };
 
         ctx.slots.inject('sidebar.panellist', () =>
           ctx.slots.register(
@@ -2320,6 +2456,19 @@ window.__ModuleLoader__.load({
               locale: NS,
             },
             NotesPanel,
+          ),
+        );
+
+        ctx.slots.inject('conversation.view', () =>
+          ctx.slots.register(
+            {
+              name: 'conversation.view',
+              id: 'sticky-notes',
+              order: 30,
+              locale: NS,
+              label: () => t('view.label'),
+            },
+            SessionNotesView,
           ),
         );
       },
