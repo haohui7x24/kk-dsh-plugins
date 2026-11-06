@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "A sticky-note wall in the sidebar plus a per-session sticky notes tab in conversations.",
+  "description": "A sticky-note wall in the sidebar for jotting down anything you need to do.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -18,13 +18,14 @@
     "icon.svg"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,
       "inject": [
-        "@deepseek-ai/dsh-client-ui-sidebar",
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
   }

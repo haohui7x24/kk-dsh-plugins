@@ -31,13 +31,6 @@ window.__ModuleLoader__.load({
         'panel.label': 'Sticky notes',
         title: 'Sticky notes',
         subtitle: 'Jot down anything you need to do. It stays on this machine.',
-        'view.label': 'Notes',
-        'session.viewSubtitle':
-          'Only notes linked to “{title}”. New notes are linked to this session automatically.',
-        'session.fixedHint': 'New notes are linked to this session automatically.',
-        'empty.sessionTitle': 'No notes for this session',
-        'empty.sessionBody':
-          'Add the first note above — it will be linked to this session automatically.',
         'composer.placeholder': 'What do you need to do?',
         'composer.hint': 'Enter to add · Shift+Enter for a new line · paste images directly',
         'action.add': 'Add note',
@@ -110,11 +103,6 @@ window.__ModuleLoader__.load({
         'panel.label': '便签墙',
         title: '便签墙',
         subtitle: '随手记下要做的事，便签会保存在这台机器上。',
-        'view.label': '便签',
-        'session.viewSubtitle': '只显示关联到「{title}」的便签，新建便签会自动绑定这个会话。',
-        'session.fixedHint': '新便签会自动绑定这个会话',
-        'empty.sessionTitle': '这个会话还没有便签',
-        'empty.sessionBody': '在上方记下第一件要做的事，新便签会自动绑定到当前会话。',
         'composer.placeholder': '记下要做的事…',
         'composer.hint': 'Enter 添加 · Shift+Enter 换行 · 可直接粘贴图片',
         'action.add': '添加便签',
@@ -190,7 +178,6 @@ window.__ModuleLoader__.load({
       '.dsn-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;--dsh-scrollbar-width:9px;--dsh-scrollbar-thumb-border:2px}',
       '.dsn-inner{box-sizing:border-box;max-width:1060px;margin:0 auto;padding:30px clamp(20px,4vw,46px) 72px}',
       '[data-platform="darwin"] .dsn-inner{padding-top:calc(30px + var(--dsh-frame-top-clearance,0px))}',
-      '[data-platform="darwin"] .dsn-root--embedded .dsn-inner{padding-top:30px}',
       '.dsn-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 18px}',
       '.dsn-heading{min-width:0}',
       '.dsn-title{margin:0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-.01em}',
@@ -282,8 +269,6 @@ window.__ModuleLoader__.load({
       '.dsn-session-chip-label{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}',
       '.dsn-session-chip-remove{display:grid;place-items:center;flex:none;width:14px;height:14px;padding:0;border:0;border-radius:50%;background:rgba(59,51,32,.12);color:#3b3320;cursor:pointer;appearance:none}',
       '.dsn-session-chip-remove:hover{background:rgba(59,51,32,.24)}',
-      '.dsn-fixed-session{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
-      '.dsn-fixed-hint{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}',
       '.dsn-edit{box-sizing:border-box;width:100%;min-height:92px;max-height:240px;padding:8px;border:1px solid rgba(59,51,32,.24);border-radius:8px;outline:0;resize:vertical;background:rgba(255,255,255,.38);color:#3b3320;font:inherit;font-size:14px;line-height:21px}',
       '.dsn-edit:focus{border-color:rgba(59,51,32,.62)}',
       '.dsn-edit-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}',
@@ -1027,7 +1012,7 @@ window.__ModuleLoader__.load({
     }
 
     function SessionChips(props) {
-      const { sessions, t, onOpen, onRemove, readOnly, className } = props;
+      const { sessions, t, onOpen, onRemove, className } = props;
       if (!sessions || sessions.length === 0) return null;
       return h(
         'div',
@@ -1036,8 +1021,8 @@ window.__ModuleLoader__.load({
           const label = session.title || t('session.untitled');
           const title = t('session.open', { title: label });
           const icon = h(ChatIcon, { size: 10 });
-          const interactive = !readOnly && typeof onOpen === 'function';
-          const removable = !readOnly && typeof onRemove === 'function';
+          const interactive = typeof onOpen === 'function';
+          const removable = typeof onRemove === 'function';
           return h(
             'span',
             {
@@ -1385,14 +1370,6 @@ window.__ModuleLoader__.load({
       useLocaleRevision(locale);
 
       const { notes, phase, mode, error, persist } = useWall();
-      const fixedSession =
-        props.fixedSession && props.fixedSession.id ? props.fixedSession : null;
-      const fixedId = fixedSession ? fixedSession.id : null;
-      const scopedNotes = fixedId
-        ? notes.filter((note) =>
-            (note.sessions || []).some((session) => session.id === fixedId),
-          )
-        : notes;
       // The wall opens on what still needs doing; "全部" stays one tap away.
       const [filter, setFilter] = React.useState('open');
       const [draft, setDraft] = React.useState('');
@@ -1407,9 +1384,7 @@ window.__ModuleLoader__.load({
       const [viewingImage, setViewingImage] = React.useState(null);
       const [draggingId, setDraggingId] = React.useState(null);
       const [dropTarget, setDropTarget] = React.useState(null);
-      const [draftSessions, setDraftSessions] = React.useState(() =>
-        fixedSession ? [fixedSession] : [],
-      );
+      const [draftSessions, setDraftSessions] = React.useState([]);
       const [editSessions, setEditSessions] = React.useState([]);
       const [sessionPicker, setSessionPicker] = React.useState(null);
       const [sessionError, setSessionError] = React.useState('');
@@ -1422,9 +1397,9 @@ window.__ModuleLoader__.load({
         typeof props.openSession === 'function';
       const activeLocale =
         locale && typeof locale.getSnapshot === 'function' ? locale.getSnapshot().active : undefined;
-      const openCount = scopedNotes.filter((note) => !note.done).length;
-      const doneCount = scopedNotes.length - openCount;
-      const visible = scopedNotes.filter((note) => {
+      const openCount = notes.filter((note) => !note.done).length;
+      const doneCount = notes.length - openCount;
+      const visible = notes.filter((note) => {
         if (filter === 'open') return !note.done;
         if (filter === 'done') return note.done;
         return true;
@@ -1704,14 +1679,14 @@ window.__ModuleLoader__.load({
           createdAt: now,
           updatedAt: now,
           images: draftImages,
-          sessions: fixedSession ? [fixedSession] : draftSessions,
+          sessions: draftSessions,
         };
         persist([note, ...notes]);
         // A new note is always open, so leave "已完成" to keep it in view.
         if (filter === 'done') setFilter('open');
         setDraft('');
         setDraftImages([]);
-        setDraftSessions(fixedSession ? [fixedSession] : []);
+        setDraftSessions([]);
         setImageError('');
         setSessionError('');
       }
@@ -1743,13 +1718,6 @@ window.__ModuleLoader__.load({
         setEditColor(note.color);
         setEditImages((note.images || []).slice());
         const nextSessions = (note.sessions || []).slice();
-        if (fixedSession) {
-          const index = nextSessions.findIndex(
-            (session) => session.id === fixedSession.id,
-          );
-          if (index >= 0) nextSessions[index] = fixedSession;
-          else nextSessions.unshift(fixedSession);
-        }
         setEditSessions(nextSessions.slice(0, MAX_SESSIONS));
         setImageError('');
         setSessionError('');
@@ -1780,14 +1748,7 @@ window.__ModuleLoader__.load({
                 text: text.slice(0, MAX_TEXT),
                 color: editColor,
                 images: editImages,
-                sessions: fixedSession
-                  ? [
-                      fixedSession,
-                      ...editSessions.filter(
-                        (session) => session.id !== fixedSession.id,
-                      ),
-                    ].slice(0, MAX_SESSIONS)
-                  : editSessions,
+                sessions: editSessions,
                 updatedAt: Date.now(),
               }
             : item,
@@ -1840,24 +1801,15 @@ window.__ModuleLoader__.load({
       }
 
       const headingCount =
-        scopedNotes.length === 1
+        notes.length === 1
           ? t('count.one')
-          : t('count.other', { count: scopedNotes.length });
+          : t('count.other', { count: notes.length });
 
       function renderEmpty() {
-        if (fixedId && scopedNotes.length === 0) {
-          return h(
-            'div',
-            { className: 'dsn-empty' },
-            h('div', { className: 'dsn-empty-art' }, h(EmptyArt)),
-            h('p', { className: 'dsn-empty-title' }, t('empty.sessionTitle')),
-            h('p', { className: 'dsn-empty-body' }, t('empty.sessionBody')),
-          );
-        }
         // An empty wall is empty for every filter, so never claim that its
         // to-dos were all checked off just because "待办" is the default view.
         const key =
-          scopedNotes.length === 0
+          notes.length === 0
             ? ''
             : filter === 'open'
               ? 'open'
@@ -1985,8 +1937,7 @@ window.__ModuleLoader__.load({
                 h(SessionChips, {
                   sessions: editSessions,
                   t,
-                  onRemove: fixedSession ? undefined : removeEditSession,
-                  readOnly: Boolean(fixedSession),
+                  onRemove: removeEditSession,
                 }),
                 h(
                   'div',
@@ -2002,20 +1953,18 @@ window.__ModuleLoader__.load({
                     disabled: uploading > 0 || editImages.length >= MAX_IMAGES,
                     onFiles: (files) => attachFiles(files, editImages.length, addEditImages),
                   }),
-                  fixedSession
-                    ? null
-                    : h(
-                        'button',
-                        {
-                          type: 'button',
-                          className: 'dsn-attach',
-                          disabled: !canBindSessions,
-                          'aria-label': t('session.bind'),
-                          title: t('session.bind'),
-                          onClick: () => openSessionPicker(note.id),
-                        },
-                        h(LinkIcon, { size: 15 }),
-                      ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'dsn-attach',
+                      disabled: !canBindSessions,
+                      'aria-label': t('session.bind'),
+                      title: t('session.bind'),
+                      onClick: () => openSessionPicker(note.id),
+                    },
+                    h(LinkIcon, { size: 15 }),
+                  ),
                   h(
                     'div',
                     { className: 'dsn-edit-btns' },
@@ -2081,15 +2030,9 @@ window.__ModuleLoader__.load({
                 ? t('status.local')
                 : t('status.ready');
 
-      const subtitleText = fixedSession
-        ? t('session.viewSubtitle', {
-            title: fixedSession.title || t('session.untitled'),
-          })
-        : t('subtitle');
-
       return h(
         'div',
-        { className: fixedSession ? 'dsn-root dsn-root--embedded' : 'dsn-root' },
+        { className: 'dsn-root' },
         h(
           'div',
           { className: 'dsn-scroll' },
@@ -2103,7 +2046,7 @@ window.__ModuleLoader__.load({
                 'div',
                 { className: 'dsn-heading' },
                 h('h1', { className: 'dsn-title' }, t('title')),
-                h('p', { className: 'dsn-sub' }, subtitleText),
+                h('p', { className: 'dsn-sub' }, t('subtitle')),
               ),
               h('span', { className: 'dsn-count' }, headingCount),
             ),
@@ -2157,27 +2100,16 @@ window.__ModuleLoader__.load({
                       : null,
                   )
                 : null,
-              fixedSession
-                ? h(
-                    'div',
-                    { className: 'dsn-fixed-session' },
-                    h(SessionChips, {
-                      sessions: [fixedSession],
-                      t,
-                      readOnly: true,
-                    }),
-                    h('span', { className: 'dsn-fixed-hint' }, t('session.fixedHint')),
-                  )
-                : draftSessions.length > 0
-                  ? h(SessionChips, {
-                      sessions: draftSessions,
-                      t,
-                      onRemove: (id) =>
-                        setDraftSessions((prev) =>
-                          prev.filter((session) => session.id !== id),
-                        ),
-                    })
-                  : null,
+              draftSessions.length > 0
+                ? h(SessionChips, {
+                    sessions: draftSessions,
+                    t,
+                    onRemove: (id) =>
+                      setDraftSessions((prev) =>
+                        prev.filter((session) => session.id !== id),
+                      ),
+                  })
+                : null,
               h(
                 'div',
                 { className: 'dsn-composer-bar' },
@@ -2194,20 +2126,18 @@ window.__ModuleLoader__.load({
                     disabled: loading || uploading > 0 || draftImages.length >= MAX_IMAGES,
                     onFiles: (files) => attachFiles(files, draftImages.length, addDraftImages),
                   }),
-                  fixedSession
-                    ? null
-                    : h(
-                        'button',
-                        {
-                          type: 'button',
-                          className: 'dsn-attach',
-                          disabled: !canBindSessions,
-                          'aria-label': t('session.bind'),
-                          title: t('session.bind'),
-                          onClick: () => openSessionPicker('draft'),
-                        },
-                        h(LinkIcon, { size: 15 }),
-                      ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'dsn-attach',
+                      disabled: !canBindSessions,
+                      'aria-label': t('session.bind'),
+                      title: t('session.bind'),
+                      onClick: () => openSessionPicker('draft'),
+                    },
+                    h(LinkIcon, { size: 15 }),
+                  ),
                 ),
                 h(
                   'div',
@@ -2284,7 +2214,7 @@ window.__ModuleLoader__.load({
                     onClick: () => setFilter('all'),
                   },
                   t('filter.all'),
-                  h('span', { className: 'dsn-tab-count' }, scopedNotes.length),
+                  h('span', { className: 'dsn-tab-count' }, notes.length),
                 ),
                 h(
                   'button',
@@ -2414,27 +2344,6 @@ window.__ModuleLoader__.load({
             t: typeof props.t === 'function' ? props.t : t,
             openSession: (sessionId) => ctx.uiWorkspace.openSession(sessionId),
           });
-        const SessionNotesView = (props) => {
-          const viewT = typeof props.t === 'function' ? props.t : t;
-          const sessionId = props.sessionId;
-          const summary = props.useSessions((state) =>
-            state && state.byId ? state.byId[sessionId] : undefined,
-          );
-          const fixedSession = sessionId
-            ? {
-                id: sessionId,
-                title: summary && summary.title ? summary.title : '',
-              }
-            : null;
-          return h(NotesWallPage, {
-            ...props,
-            t: viewT,
-            locale: ctx.locale,
-            openSession: (id) => ctx.uiWorkspace.openSession(id),
-            fixedSession,
-          });
-        };
-
         ctx.slots.inject('sidebar.panellist', () =>
           ctx.slots.register(
             {
@@ -2456,19 +2365,6 @@ window.__ModuleLoader__.load({
               locale: NS,
             },
             NotesPanel,
-          ),
-        );
-
-        ctx.slots.inject('conversation.view', () =>
-          ctx.slots.register(
-            {
-              name: 'conversation.view',
-              id: 'sticky-notes',
-              order: 30,
-              locale: NS,
-              label: () => t('view.label'),
-            },
-            SessionNotesView,
           ),
         );
       },
