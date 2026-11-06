@@ -19,11 +19,8 @@ window.__ModuleLoader__.load({
       'image/gif': 'gif',
     };
     const IMAGE_ID = /^[a-f0-9]{64}$/;
-    const SESSION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
     const MAX_TEXT = 4000;
     const MAX_IMAGES = 6;
-    const MAX_SESSIONS = 8;
-    const MAX_SESSION_ROWS = 100;
     const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
     const DICTS = {
@@ -84,19 +81,6 @@ window.__ModuleLoader__.load({
         'aria.noteActions': 'Actions for “{text}”',
         'note.move': 'Drag to reorder (arrow keys also work)',
         'note.reorderHint': 'Drag the grip on a note to reorder',
-        'session.bind': 'Bind sessions',
-        'session.bindHint': 'Bind one or more sessions. Click a session chip on the note to open it.',
-        'session.search': 'Search sessions by title or ID',
-        'session.untitled': 'Untitled session',
-        'session.loading': 'Loading sessions…',
-        'session.empty': 'No sessions available to bind.',
-        'session.noMatch': 'No sessions match your search.',
-        'session.selectedCount': '{count}/{max} selected',
-        'session.open': 'Open “{title}”',
-        'session.unbind': 'Remove session',
-        'session.error.open': 'Could not open that session.',
-        'session.tooManyRows': 'Showing the first {count} sessions; type to narrow the list.',
-        'session.done': 'Done',
         'editor.placeholder': 'Edit this note…',
       },
       zh: {
@@ -156,19 +140,6 @@ window.__ModuleLoader__.load({
         'aria.noteActions': '「{text}」的操作',
         'note.move': '拖动排序（也可用方向键）',
         'note.reorderHint': '拖动便签上的手柄可以排序',
-        'session.bind': '绑定会话',
-        'session.bindHint': '可以绑定一个或多个会话；点击便签上的会话标签即可打开。',
-        'session.search': '搜索会话标题或 ID',
-        'session.untitled': '未命名会话',
-        'session.loading': '正在读取会话…',
-        'session.empty': '没有可绑定的会话。',
-        'session.noMatch': '没有匹配的会话。',
-        'session.selectedCount': '已选 {count}/{max}',
-        'session.open': '打开「{title}」',
-        'session.unbind': '移除会话',
-        'session.error.open': '无法打开该会话。',
-        'session.tooManyRows': '先显示前 {count} 个会话，输入搜索可缩小范围。',
-        'session.done': '完成',
         'editor.placeholder': '修改这条便签…',
       },
     };
@@ -262,13 +233,6 @@ window.__ModuleLoader__.load({
       '.dsn-note[data-drop="before"]::after{left:-9px}',
       '.dsn-note[data-drop="after"]::after{right:-9px}',
       '.dsn-reorder-hint{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;white-space:nowrap}',
-      '.dsn-sessions{display:flex;flex-wrap:wrap;gap:5px;margin:0}',
-      '.dsn-session-chip{display:inline-flex;align-items:center;gap:3px;max-width:100%;padding:1px 7px;border:1px solid rgba(59,51,32,.18);border-radius:999px;background:rgba(255,255,255,.42);color:#3b3320;font:inherit;font-size:11px;line-height:16px;appearance:none}',
-      '.dsn-session-chip-open{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;appearance:none;text-align:left}',
-      '.dsn-session-chip-open:hover .dsn-session-chip-label{text-decoration:underline;text-underline-offset:2px}',
-      '.dsn-session-chip-label{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}',
-      '.dsn-session-chip-remove{display:grid;place-items:center;flex:none;width:14px;height:14px;padding:0;border:0;border-radius:50%;background:rgba(59,51,32,.12);color:#3b3320;cursor:pointer;appearance:none}',
-      '.dsn-session-chip-remove:hover{background:rgba(59,51,32,.24)}',
       '.dsn-edit{box-sizing:border-box;width:100%;min-height:92px;max-height:240px;padding:8px;border:1px solid rgba(59,51,32,.24);border-radius:8px;outline:0;resize:vertical;background:rgba(255,255,255,.38);color:#3b3320;font:inherit;font-size:14px;line-height:21px}',
       '.dsn-edit:focus{border-color:rgba(59,51,32,.62)}',
       '.dsn-edit-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}',
@@ -295,34 +259,6 @@ window.__ModuleLoader__.load({
       '.dsn-status[data-mode="local"] .dsn-dot{background:var(--dsw-alias-state-warn-primary)}',
       '.dsn-status[data-mode="saving"] .dsn-dot{background:var(--dsw-alias-state-idle-primary)}',
       '.dsn-status[data-mode="loading"] .dsn-dot{background:var(--dsw-alias-state-idle-primary)}',
-      '.dsn-session-overlay{position:fixed;inset:0;z-index:1300;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(10,10,10,.45)}',
-      '.dsn-session-dialog{box-sizing:border-box;display:flex;flex-direction:column;width:min(560px,100%);max-height:min(640px,84vh);border:.5px solid var(--dsw-alias-border-l1);border-radius:16px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-elevation-prominent,0 20px 60px rgba(0,0,0,.3));overflow:hidden}',
-      '.dsn-session-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px 0}',
-      '.dsn-session-title{margin:0;font-size:16px;line-height:24px;font-weight:600}',
-      '.dsn-session-desc{margin:4px 18px 12px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}',
-      '.dsn-session-close{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;appearance:none}',
-      '.dsn-session-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
-      '.dsn-session-search{box-sizing:border-box;width:calc(100% - 36px);height:34px;margin:0 18px 10px;padding:0 10px;border:.5px solid var(--dsw-alias-border-l2);border-radius:10px;outline:0;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}',
-      '.dsn-session-search:focus{border-color:var(--dsw-alias-state-business-primary,var(--dsw-alias-brand-primary))}',
-      '.dsn-session-search::placeholder{color:var(--dsw-alias-label-caption,var(--dsw-alias-label-tertiary))}',
-      '.dsn-session-list{flex:1;min-height:0;overflow-y:auto;padding:0 10px 8px;scrollbar-gutter:stable}',
-      '.dsn-session-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer;appearance:none}',
-      '.dsn-session-row:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-      '.dsn-session-row:disabled{opacity:.5;cursor:default}',
-      '.dsn-session-check{display:grid;place-items:center;flex:none;width:18px;height:18px;border:1.5px solid var(--dsw-alias-border-l2);border-radius:5px;color:var(--dsw-alias-label-primary-inverted);background:transparent}',
-      '.dsn-session-row[aria-checked="true"] .dsn-session-check{border-color:transparent;background:var(--dsw-alias-brand-primary)}',
-      '.dsn-session-row-main{display:flex;flex-direction:column;gap:1px;min-width:0}',
-      '.dsn-session-row-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:20px}',
-      '.dsn-session-row-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:15px;font-variant-numeric:tabular-nums}',
-      '.dsn-session-empty{padding:30px 16px;text-align:center;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:20px}',
-      '.dsn-session-more{padding:8px 10px 2px;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}',
-      '.dsn-session-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}',
-      '.dsn-session-count{color:var(--dsw-alias-label-tertiary);font-size:12px;font-variant-numeric:tabular-nums}',
-      '.dsn-session-foot-actions{display:flex;align-items:center;gap:8px}',
-      '.dsn-session-cancel{height:32px;padding:0 12px;border:.5px solid var(--dsw-alias-border-l1);border-radius:16px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;cursor:pointer;appearance:none}',
-      '.dsn-session-cancel:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-      '.dsn-session-done{height:32px;padding:0 14px;border:0;border-radius:16px;background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary));color:var(--dsw-alias-label-primary-inverted,#fff);font:inherit;font-size:13px;font-weight:500;cursor:pointer;appearance:none}',
-      '.dsn-session-done:hover{background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary))}',
       '.dsn-lightbox{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:32px;background:rgba(10,10,10,.78)}',
       '.dsn-lightbox-image{display:block;max-width:min(92vw,1200px);max-height:88vh;object-fit:contain;border-radius:10px;background:#111;box-shadow:0 20px 60px rgba(0,0,0,.5)}',
       '.dsn-lightbox-close{position:absolute;top:18px;right:18px;display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;appearance:none}',
@@ -330,7 +266,7 @@ window.__ModuleLoader__.load({
       '.dsn-root :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
       '.dsn-input:focus-visible,.dsn-edit:focus-visible{outline:0}',
       '@media (hover:none){.dsn-note-actions{opacity:1}}',
-      '@media (max-width:620px){.dsn-grid,.dsn-loading{grid-template-columns:1fr}.dsn-inner{padding-left:18px;padding-right:18px}.dsn-hint{display:none}.dsn-reorder-hint{display:none}.dsn-composer-right{margin-left:0}.dsn-add{margin-left:auto}.dsn-session-overlay{padding:12px}.dsn-session-dialog{max-height:92vh}}',
+      '@media (max-width:620px){.dsn-grid,.dsn-loading{grid-template-columns:1fr}.dsn-inner{padding-left:18px;padding-right:18px}.dsn-hint{display:none}.dsn-reorder-hint{display:none}.dsn-composer-right{margin-left:0}.dsn-add{margin-left:auto}}',
       '@media (prefers-reduced-motion:reduce){.dsn-skeleton{animation:none}.dsn-spinner{animation:none}.dsn-swatch,.dsn-check,.dsn-note-actions{transition:none}}',
     ].join('');
 
@@ -373,30 +309,10 @@ window.__ModuleLoader__.load({
       return images;
     }
 
-    function normalizeClientSessions(list) {
-      if (!Array.isArray(list)) return [];
-      const sessions = [];
-      const seen = new Set();
-      for (const raw of list) {
-        if (sessions.length >= MAX_SESSIONS) break;
-        if (!raw || typeof raw !== 'object') continue;
-        const id = typeof raw.id === 'string' ? raw.id : '';
-        if (!SESSION_ID.test(id) || seen.has(id)) continue;
-        seen.add(id);
-        const title =
-          typeof raw.title === 'string'
-            ? raw.title.replace(/\s+/g, ' ').trim().slice(0, 200)
-            : '';
-        sessions.push({ id, title });
-      }
-      return sessions;
-    }
-
     function normalizeClientNote(raw) {
       if (!raw || typeof raw !== 'object') return null;
       const text = typeof raw.text === 'string' ? raw.text.slice(0, MAX_TEXT) : '';
       const images = normalizeClientImages(raw.images);
-      const sessions = normalizeClientSessions(raw.sessions);
       if (!text.trim() && images.length === 0) return null;
       const createdAt = Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now();
       return {
@@ -407,7 +323,6 @@ window.__ModuleLoader__.load({
         createdAt,
         updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : createdAt,
         images,
-        sessions,
       };
     }
 
@@ -770,66 +685,6 @@ window.__ModuleLoader__.load({
       );
     }
 
-    function ChatIcon(props) {
-      const size = props && props.size ? props.size : 14;
-      return h(
-        'svg',
-        {
-          width: size,
-          height: size,
-          viewBox: '0 0 16 16',
-          fill: 'none',
-          'aria-hidden': 'true',
-          focusable: 'false',
-        },
-        h('path', {
-          d: 'M2.6 3.2h10.8v7.1H7.5L4.3 13v-2.7H2.6z',
-          stroke: 'currentColor',
-          strokeWidth: 1.3,
-          strokeLinejoin: 'round',
-        }),
-        h('path', {
-          d: 'M5.2 6.1h5.6M5.2 8.1h3.4',
-          stroke: 'currentColor',
-          strokeWidth: 1.2,
-          strokeLinecap: 'round',
-        }),
-      );
-    }
-
-    function LinkIcon(props) {
-      const size = props && props.size ? props.size : 15;
-      return h(
-        'svg',
-        {
-          width: size,
-          height: size,
-          viewBox: '0 0 16 16',
-          fill: 'none',
-          'aria-hidden': 'true',
-          focusable: 'false',
-        },
-        h('path', {
-          d: 'M6.7 9.3l2.6-2.6',
-          stroke: 'currentColor',
-          strokeWidth: 1.4,
-          strokeLinecap: 'round',
-        }),
-        h('path', {
-          d: 'M5.4 10.6l-.7.7a2 2 0 002.8 2.8l.7-.7',
-          stroke: 'currentColor',
-          strokeWidth: 1.3,
-          strokeLinecap: 'round',
-        }),
-        h('path', {
-          d: 'M10.6 5.4l.7-.7a2 2 0 012.8 2.8l-.7.7',
-          stroke: 'currentColor',
-          strokeWidth: 1.3,
-          strokeLinecap: 'round',
-        }),
-      );
-    }
-
     function WarningIcon(props) {
       const size = props && props.size ? props.size : 14;
       return h(
@@ -1005,294 +860,6 @@ window.__ModuleLoader__.load({
       );
     }
 
-    function shortSessionId(id) {
-      const text = String(id || '');
-      const tail = text.indexOf('session-') === 0 ? text.slice(8) : text;
-      return tail.length > 10 ? tail.slice(0, 10) : tail;
-    }
-
-    function SessionChips(props) {
-      const { sessions, t, onOpen, onRemove, className } = props;
-      if (!sessions || sessions.length === 0) return null;
-      return h(
-        'div',
-        { className: className || 'dsn-sessions' },
-        sessions.map((session) => {
-          const label = session.title || t('session.untitled');
-          const title = t('session.open', { title: label });
-          const icon = h(ChatIcon, { size: 10 });
-          const interactive = typeof onOpen === 'function';
-          const removable = typeof onRemove === 'function';
-          return h(
-            'span',
-            {
-              key: session.id,
-              className: 'dsn-session-chip',
-              title: `${label} · ${session.id}`,
-            },
-            interactive
-              ? h(
-                  'button',
-                  {
-                    type: 'button',
-                    className: 'dsn-session-chip-open',
-                    'aria-label': title,
-                    onClick: () => onOpen(session.id),
-                  },
-                  icon,
-                  h('span', { className: 'dsn-session-chip-label' }, label),
-                )
-              : h(
-                  'span',
-                  { className: 'dsn-session-chip-label' },
-                  icon,
-                  h('span', null, label),
-                ),
-            removable
-              ? h(
-                  'button',
-                  {
-                    type: 'button',
-                    className: 'dsn-session-chip-remove',
-                    'aria-label': t('session.unbind'),
-                    title: t('session.unbind'),
-                    onClick: () => onRemove(session.id),
-                  },
-                  h(CloseIcon, { size: 9 }),
-                )
-              : null,
-          );
-        }),
-      );
-    }
-
-    function SessionDialog(props) {
-      const { t, useSessions, useWorkspaces, selected, onApply, onClose, activeLocale } = props;
-      const [query, setQuery] = React.useState('');
-      const dialogRef = React.useRef(null);
-      const [draft, setDraft] = React.useState(() =>
-        (Array.isArray(selected) ? selected : []).slice(),
-      );
-      const list = useSessions((state) => state);
-      const archivedSessionIds = useWorkspaces((state) => state.archivedSessionIds);
-      const archived = React.useMemo(
-        () => new Set(archivedSessionIds || []),
-        [archivedSessionIds],
-      );
-
-      React.useEffect(() => {
-        const onKey = (event) => {
-          if (event.key === 'Escape') {
-            onClose();
-            return;
-          }
-          if (event.key !== 'Tab') return;
-          const root = dialogRef.current;
-          if (!root) return;
-          const focusable = Array.from(
-            root.querySelectorAll(
-              'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
-            ),
-          ).filter((element) => element.getClientRects().length > 0);
-          if (focusable.length === 0) {
-            event.preventDefault();
-            return;
-          }
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          const active = document.activeElement;
-          if (!root.contains(active)) {
-            event.preventDefault();
-            (event.shiftKey ? last : first).focus();
-            return;
-          }
-          if (event.shiftKey && active === first) {
-            event.preventDefault();
-            last.focus();
-          } else if (!event.shiftKey && active === last) {
-            event.preventDefault();
-            first.focus();
-          }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [onClose]);
-
-      const sessions = React.useMemo(() => {
-        const ids = list && Array.isArray(list.ids) ? list.ids : [];
-        const byId = list && list.byId ? list.byId : {};
-        const rows = [];
-        for (const id of ids) {
-          const summary = byId[id];
-          if (!summary) continue;
-          // Keep the blank conversation the user is currently in so it can be
-          // bound before its first message; other blank sessions stay hidden.
-          const currentBlank =
-            summary.blank === true &&
-            Boolean(summary.retainedBy) &&
-            summary.retainedBy.mainView > 0;
-          if (
-            (summary.blank && !currentBlank) ||
-            summary.origin === 'subagent' ||
-            archived.has(summary.id)
-          ) {
-            continue;
-          }
-          rows.push(summary);
-        }
-        rows.sort((left, right) => (right.updatedAt || 0) - (left.updatedAt || 0));
-        const needle = query.trim().toLowerCase();
-        if (!needle) return rows;
-        return rows.filter((summary) =>
-          `${summary.title || ''} ${summary.id}`.toLowerCase().indexOf(needle) >= 0,
-        );
-      }, [list, query, archived]);
-
-      const shown = sessions.slice(0, MAX_SESSION_ROWS);
-      const selectedIds = new Set(draft.map((session) => session.id));
-      const atLimit = draft.length >= MAX_SESSIONS;
-
-      function toggle(summary) {
-        if (draft.some((session) => session.id === summary.id)) {
-          setDraft(draft.filter((session) => session.id !== summary.id));
-          return;
-        }
-        if (atLimit) return;
-        setDraft([...draft, { id: summary.id, title: summary.title || '' }]);
-      }
-
-      return h(
-        'div',
-        {
-          className: 'dsn-session-overlay',
-          role: 'presentation',
-          onClick: onClose,
-        },
-        h(
-          'div',
-          {
-            className: 'dsn-session-dialog',
-            role: 'dialog',
-            'aria-modal': 'true',
-            'aria-label': t('session.bind'),
-            ref: dialogRef,
-            onClick: (event) => event.stopPropagation(),
-          },
-          h(
-            'header',
-            { className: 'dsn-session-head' },
-            h('h2', { className: 'dsn-session-title' }, t('session.bind')),
-            h(
-              'button',
-              {
-                type: 'button',
-                className: 'dsn-session-close',
-                'aria-label': t('action.cancel'),
-                title: t('action.cancel'),
-                onClick: onClose,
-              },
-              h(CloseIcon, { size: 14 }),
-            ),
-          ),
-          h('p', { className: 'dsn-session-desc' }, t('session.bindHint')),
-          h('input', {
-            className: 'dsn-session-search',
-            type: 'search',
-            value: query,
-            placeholder: t('session.search'),
-            'aria-label': t('session.search'),
-            autoFocus: true,
-            onChange: (event) => setQuery(event.target.value),
-          }),
-          h(
-            'div',
-            { className: 'dsn-session-list' },
-            (list && list.phase !== 'ready' && sessions.length === 0)
-              ? h('div', { className: 'dsn-session-empty' }, t('session.loading'))
-              : sessions.length === 0
-                ? h(
-                    'div',
-                    { className: 'dsn-session-empty' },
-                    query.trim() ? t('session.noMatch') : t('session.empty'),
-                  )
-                : shown.map((summary) => {
-                    const checked = selectedIds.has(summary.id);
-                    const title = summary.title || t('session.untitled');
-                    const when = formatWhen(summary.updatedAt, t, activeLocale);
-                    const meta = [when, shortSessionId(summary.id)]
-                      .filter(Boolean)
-                      .join(' · ');
-                    return h(
-                      'button',
-                      {
-                        key: summary.id,
-                        type: 'button',
-                        className: 'dsn-session-row',
-                        role: 'checkbox',
-                        'aria-checked': checked,
-                        disabled: !checked && atLimit,
-                        onClick: () => toggle(summary),
-                      },
-                      h(
-                        'span',
-                        { className: 'dsn-session-check', 'aria-hidden': 'true' },
-                        checked ? h(CheckIcon, { size: 11 }) : null,
-                      ),
-                      h(
-                        'span',
-                        { className: 'dsn-session-row-main' },
-                        h('span', { className: 'dsn-session-row-title' }, title),
-                        h(
-                          'span',
-                          { className: 'dsn-session-row-meta', title: summary.id },
-                          meta,
-                        ),
-                      ),
-                    );
-                  }),
-            sessions.length > shown.length
-              ? h(
-                  'div',
-                  { className: 'dsn-session-more' },
-                  t('session.tooManyRows', { count: shown.length }),
-                )
-              : null,
-          ),
-          h(
-            'footer',
-            { className: 'dsn-session-foot' },
-            h(
-              'span',
-              { className: 'dsn-session-count' },
-              t('session.selectedCount', { count: draft.length, max: MAX_SESSIONS }),
-            ),
-            h(
-              'div',
-              { className: 'dsn-session-foot-actions' },
-              h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'dsn-session-cancel',
-                  onClick: onClose,
-                },
-                t('action.cancel'),
-              ),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'dsn-session-done',
-                  onClick: () => onApply(draft),
-                },
-                t('session.done'),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
     function useWall() {
       const [notes, setNotes] = React.useState(() => (memoryNotes ? memoryNotes.slice() : []));
       const [phase, setPhase] = React.useState(() => (memoryNotes ? 'ready' : 'loading'));
@@ -1384,17 +951,9 @@ window.__ModuleLoader__.load({
       const [viewingImage, setViewingImage] = React.useState(null);
       const [draggingId, setDraggingId] = React.useState(null);
       const [dropTarget, setDropTarget] = React.useState(null);
-      const [draftSessions, setDraftSessions] = React.useState([]);
-      const [editSessions, setEditSessions] = React.useState([]);
-      const [sessionPicker, setSessionPicker] = React.useState(null);
-      const [sessionError, setSessionError] = React.useState('');
       const uploadCountRef = React.useRef(0);
 
       const loading = phase === 'loading';
-      const canBindSessions =
-        typeof props.useSessions === 'function' &&
-        typeof props.useWorkspaces === 'function' &&
-        typeof props.openSession === 'function';
       const activeLocale =
         locale && typeof locale.getSnapshot === 'function' ? locale.getSnapshot().active : undefined;
       const openCount = notes.filter((note) => !note.done).length;
@@ -1514,31 +1073,6 @@ window.__ModuleLoader__.load({
         }
         event.preventDefault();
         attachFiles(event.dataTransfer.files, currentCount, apply);
-      }
-
-      function openSessionPicker(which) {
-        if (!canBindSessions) return;
-        setSessionError('');
-        setSessionPicker(which);
-      }
-
-      function applyPickedSessions(next) {
-        if (sessionPicker === 'draft') setDraftSessions(next);
-        else if (sessionPicker) setEditSessions(next);
-        setSessionPicker(null);
-      }
-
-      function handleOpenSession(sessionId) {
-        if (typeof props.openSession !== 'function') return;
-        try {
-          props.openSession(sessionId);
-        } catch {
-          setSessionError('session.error.open');
-        }
-      }
-
-      function removeEditSession(id) {
-        setEditSessions((prev) => prev.filter((session) => session.id !== id));
       }
 
       function finishReorder(sourceId, targetId, position) {
@@ -1679,16 +1213,13 @@ window.__ModuleLoader__.load({
           createdAt: now,
           updatedAt: now,
           images: draftImages,
-          sessions: draftSessions,
         };
         persist([note, ...notes]);
         // A new note is always open, so leave "已完成" to keep it in view.
         if (filter === 'done') setFilter('open');
         setDraft('');
         setDraftImages([]);
-        setDraftSessions([]);
         setImageError('');
-        setSessionError('');
       }
 
       function toggleNote(note) {
@@ -1717,19 +1248,14 @@ window.__ModuleLoader__.load({
         setEditText(note.text);
         setEditColor(note.color);
         setEditImages((note.images || []).slice());
-        const nextSessions = (note.sessions || []).slice();
-        setEditSessions(nextSessions.slice(0, MAX_SESSIONS));
         setImageError('');
-        setSessionError('');
       }
 
       function cancelEdit() {
         setEditingId(null);
         setEditText('');
         setEditImages([]);
-        setEditSessions([]);
         setImageError('');
-        setSessionError('');
       }
 
       function commitEdit(note) {
@@ -1748,7 +1274,6 @@ window.__ModuleLoader__.load({
                 text: text.slice(0, MAX_TEXT),
                 color: editColor,
                 images: editImages,
-                sessions: editSessions,
                 updatedAt: Date.now(),
               }
             : item,
@@ -1763,9 +1288,7 @@ window.__ModuleLoader__.load({
         setEditingId(null);
         setEditText('');
         setEditImages([]);
-        setEditSessions([]);
         setImageError('');
-        setSessionError('');
       }
 
       function removeDraftImage(image) {
@@ -1934,11 +1457,6 @@ window.__ModuleLoader__.load({
                   onRemove: removeEditImage,
                   className: 'dsn-note-images dsn-edit-images',
                 }),
-                h(SessionChips, {
-                  sessions: editSessions,
-                  t,
-                  onRemove: removeEditSession,
-                }),
                 h(
                   'div',
                   { className: 'dsn-edit-bar' },
@@ -1953,18 +1471,6 @@ window.__ModuleLoader__.load({
                     disabled: uploading > 0 || editImages.length >= MAX_IMAGES,
                     onFiles: (files) => attachFiles(files, editImages.length, addEditImages),
                   }),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dsn-attach',
-                      disabled: !canBindSessions,
-                      'aria-label': t('session.bind'),
-                      title: t('session.bind'),
-                      onClick: () => openSessionPicker(note.id),
-                    },
-                    h(LinkIcon, { size: 15 }),
-                  ),
                   h(
                     'div',
                     { className: 'dsn-edit-btns' },
@@ -2008,11 +1514,6 @@ window.__ModuleLoader__.load({
                   images: note.images,
                   t,
                   onView: setViewingImage,
-                }),
-                h(SessionChips, {
-                  sessions: note.sessions,
-                  t,
-                  onOpen: handleOpenSession,
                 }),
               ),
         );
@@ -2100,16 +1601,6 @@ window.__ModuleLoader__.load({
                       : null,
                   )
                 : null,
-              draftSessions.length > 0
-                ? h(SessionChips, {
-                    sessions: draftSessions,
-                    t,
-                    onRemove: (id) =>
-                      setDraftSessions((prev) =>
-                        prev.filter((session) => session.id !== id),
-                      ),
-                  })
-                : null,
               h(
                 'div',
                 { className: 'dsn-composer-bar' },
@@ -2126,18 +1617,6 @@ window.__ModuleLoader__.load({
                     disabled: loading || uploading > 0 || draftImages.length >= MAX_IMAGES,
                     onFiles: (files) => attachFiles(files, draftImages.length, addDraftImages),
                   }),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dsn-attach',
-                      disabled: !canBindSessions,
-                      'aria-label': t('session.bind'),
-                      title: t('session.bind'),
-                      onClick: () => openSessionPicker('draft'),
-                    },
-                    h(LinkIcon, { size: 15 }),
-                  ),
                 ),
                 h(
                   'div',
@@ -2178,14 +1657,6 @@ window.__ModuleLoader__.load({
                   { className: 'dsn-banner', role: 'alert' },
                   h(WarningIcon, { size: 14 }),
                   h('span', null, t(error)),
-                )
-              : null,
-            sessionError
-              ? h(
-                  'div',
-                  { className: 'dsn-banner', role: 'alert' },
-                  h(WarningIcon, { size: 14 }),
-                  h('span', null, t(sessionError)),
                 )
               : null,
             h(
@@ -2300,22 +1771,11 @@ window.__ModuleLoader__.load({
               }),
             )
           : null,
-        sessionPicker && canBindSessions
-          ? h(SessionDialog, {
-              t,
-              useSessions: props.useSessions,
-              useWorkspaces: props.useWorkspaces,
-              selected: sessionPicker === 'draft' ? draftSessions : editSessions,
-              activeLocale,
-              onApply: applyPickedSessions,
-              onClose: () => setSessionPicker(null),
-            })
-          : null,
       );
     }
 
     return {
-      inject: ['slots', 'locale', 'uiWorkspace'],
+      inject: ['slots', 'locale'],
       apply(ctx) {
         ctx.effect(() => {
           if (typeof document === 'undefined') return undefined;
@@ -2342,7 +1802,6 @@ window.__ModuleLoader__.load({
             ...props,
             locale: ctx.locale,
             t: typeof props.t === 'function' ? props.t : t,
-            openSession: (sessionId) => ctx.uiWorkspace.openSession(sessionId),
           });
         ctx.slots.inject('sidebar.panellist', () =>
           ctx.slots.register(

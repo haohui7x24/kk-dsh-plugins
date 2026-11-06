@@ -39,11 +39,9 @@ const IMAGE_EXT_TYPES = new Map([
 ]);
 const IMAGE_NAME = /^([a-f0-9]{64})\.(png|jpg|webp|gif)$/;
 const IMAGE_ID = /^[a-f0-9]{64}$/;
-const SESSION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const MAX_NOTES = 500;
 const MAX_TEXT = 4000;
 const MAX_IMAGES = 6;
-const MAX_SESSIONS = 8;
 const MAX_BODY = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
@@ -192,25 +190,6 @@ function normalizeImages(input) {
   return images;
 }
 
-function normalizeSessions(input) {
-  if (!Array.isArray(input)) return [];
-  const sessions = [];
-  const seen = new Set();
-  for (const raw of input) {
-    if (sessions.length >= MAX_SESSIONS) break;
-    if (!raw || typeof raw !== 'object') continue;
-    const id = typeof raw.id === 'string' ? raw.id : '';
-    if (!SESSION_ID.test(id) || seen.has(id)) continue;
-    seen.add(id);
-    const title =
-      typeof raw.title === 'string'
-        ? raw.title.replace(/\s+/g, ' ').trim().slice(0, 200)
-        : '';
-    sessions.push({ id, title });
-  }
-  return sessions;
-}
-
 function normalizeNotes(input) {
   if (!Array.isArray(input)) return [];
   const notes = [];
@@ -222,7 +201,6 @@ function normalizeNotes(input) {
         ? raw.text.replace(/\r\n/g, '\n').trim().slice(0, MAX_TEXT)
         : '';
     const images = normalizeImages(raw.images);
-    const sessions = normalizeSessions(raw.sessions);
     if (!text && images.length === 0) continue;
     let id =
       typeof raw.id === 'string' && /^[A-Za-z0-9._-]{1,80}$/.test(raw.id) ? raw.id : '';
@@ -240,7 +218,6 @@ function normalizeNotes(input) {
       createdAt,
       updatedAt,
       images,
-      sessions,
     });
   }
   return notes;
